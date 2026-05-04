@@ -39,8 +39,7 @@ bathy_2m_raw <- rast("/Users/jossmith/Downloads/bat_ccsr_n_2m_bathy.tif")
 site_patches <- st_read(here::here("output","gis_data","processed","site_patch_polygons.shp"))
 
 #load LDA-predicted patch types
-#lda_patch <- load(here::here("output","lda_patch_transitionsv2.rda")) #old
-lda_patch <- load(here::here("output","lda_patch_transitionsv5.rda"))
+lda_patch <- load(here::here("output","lda_patch_transitions.rda"))
 
 # read CA state
 ca_state <- st_read("/Volumes/enhydra/data/kelp_recovery/gis_data/raw/CA_state/ca_boundary_wgs84.shp", quiet=TRUE) |> st_transform(4326)
@@ -485,17 +484,5 @@ ggplot(quad_build3) +
   )
 
 
-#save(quad_build3, file = here::here("output","survey_data","processed","zone_level_data4.rda")) 
+save(quad_build3, file = here::here("output","survey_data","processed","zone_level_data.rda")) 
 
-save(quad_build3, file = "/Volumes/enhydra/data/students/sofia/zone_level_data.rda") 
-
-################################################################################
-#Step 6: prepare scan data for plot
-
-# Convert to sf using lat/lon
-scan_sf <- st_as_sf(
-  scan_orig,
-  coords = c("long", "lat"),
-  crs = 4326,
-  remove = FALSE
-) %>% filter(year == 2024 | year == 2025)

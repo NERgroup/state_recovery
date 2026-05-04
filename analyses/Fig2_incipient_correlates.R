@@ -1,13 +1,5 @@
 ################################################################################
-# FIGURE 2: PCA habitat space + contrast-specific RF importance + boxplots
-# PLUS: Patch transitions objects used downstream:
-#   - final_patch_sf
-#   - transitions_tbl_constrained   (EXACT NAME as your downstream code expects)
-# and saves transitions_tbl_constrained to:
-#   - output/lda_patch_transitionsv5.rda
-#
-# Joshua G. Smith — UCSC Smith Lab / Nearshore Ecology Research Group
-################################################################################
+# jogsmith@ucsc.edu
 
 rm(list = ls())
 options(stringsAsFactors = FALSE)
@@ -15,17 +7,16 @@ options(stringsAsFactors = FALSE)
 require(librarian)
 shelf(
   tidyverse, janitor, lubridate, sf, here,
-  randomForest, patchwork, ggrepel, tidytext
+  randomForest, patchwork, ggrepel, tidytext, vegan
 )
 
 # Reproducibility
 set.seed(1985)
 
 ################################################################################
-# 0. Setup / load data ---------------------------------------------------------
-################################################################################
+#Setup / load data 
 
-load(here::here("output", "survey_data", "processed", "zone_level_data4.rda"))
+load(here::here("output", "survey_data", "processed", "zone_level_data.rda"))
 
 years_keep <- c(2024, 2025)
 
@@ -36,8 +27,7 @@ patch_colors <- c(
 )
 
 ################################################################################
-# Helper functions -------------------------------------------------------------
-################################################################################
+# Helper functions 
 
 mode_char <- function(x) {
   x <- x[!is.na(x)]
@@ -59,8 +49,7 @@ med_impute <- function(x) {
 }
 
 ################################################################################
-# PART A. Habitat-only RF: train 2024 diver calls, predict 2025 ----------------
-################################################################################
+# PART A. Habitat-only RF: train 2024 diver calls, predict 2025 
 
 dat_raw <- quad_build3 %>%
   sf::st_drop_geometry() %>%
@@ -162,11 +151,9 @@ pred_2025 <- test_df %>%
   dplyr::distinct(patch_id, site, zone, year, .keep_all = TRUE)
 
 ################################################################################
-# Patch-level transitions table for LDA (2024 diver calls → 2025 RF states) -----
-# (This is your original block, with the same object names)
-################################################################################
+# Patch-level transitions table for LDA 
 
-# 1. Diver-called per patch (patch_2024)
+#Diver-called per patch (patch_2024)
 patch_calls_tbl <- quad_build3 %>%
   sf::st_drop_geometry() %>%
   dplyr::mutate(year = lubridate::year(survey_date)) %>%
@@ -180,7 +167,7 @@ patch_calls_tbl <- quad_build3 %>%
     patch_2024 = factor(patch_2024, levels = c("BAR","INCIP","FOR"))
   )
 
-# 2. Patch geometry dissolved per patch_id
+#Patch geometry dissolved per patch_id
 patch_geom_tbl <- quad_build3 %>%
   dplyr::select(patch_id, site, zone, geometry) %>%
   dplyr::group_by(patch_id, site, zone) %>%
@@ -189,7 +176,7 @@ patch_geom_tbl <- quad_build3 %>%
     .groups  = "drop"
   )
 
-# 3. Predicted 2025 state from habitat RF
+#Predicted 2025 state from habitat RF
 patch_pred2025_tbl <- pred_2025 %>%
   dplyr::transmute(
     patch_id,
@@ -199,7 +186,7 @@ patch_pred2025_tbl <- pred_2025 %>%
     patch_2025 = factor(patch_2025, levels = c("BAR","INCIP","FOR"))
   )
 
-# 4. Join together: patch_2024 (diver) + patch_2025 (RF) + geometry
+#Join patch_2024 and patch_2025 
 final_patch_sf <- patch_geom_tbl %>%
   dplyr::left_join(patch_calls_tbl, by = c("patch_id","site","zone")) %>%
   dplyr::left_join(patch_pred2025_tbl, by = "patch_id") %>%
@@ -207,7 +194,7 @@ final_patch_sf <- patch_geom_tbl %>%
   dplyr::select(patch_id, site, zone, patch_2024, patch_2025, geometry) %>%
   sf::st_as_sf()
 
-# 5. LDA-friendly transitions table (no geometry)
+#LDA-friendly transitions table (no geometry)
 transitions_tbl_constrained <- final_patch_sf %>%
   sf::st_drop_geometry() %>%
   dplyr::mutate(
@@ -219,10 +206,13 @@ transitions_tbl_constrained <- final_patch_sf %>%
 
 str(transitions_tbl_constrained)
 
+###NOTE: NAs for REC_14 shallow in 2024 and REC_13 deep in 2024 are ok. These
+#sites were surveyed only in 2025
+
 # SAVE with the exact same object name as downstream expects
 #save(
 #  transitions_tbl_constrained,
-#  file = here::here("output", "lda_patch_transitionsv6.rda")
+#  file = here::here("output", "lda_patch_transitions.rda")
 #)
 
 ################################################################################
@@ -245,8 +235,7 @@ state_lookup_all <- dplyr::bind_rows(state_lookup_2024, state_lookup_2025)
 #)
 
 ################################################################################
-# PART C (Fig 2A): PCA biplot of habitat structure -----------------------------
-################################################################################
+#Figure 2A 
 
 state_lookup_2024_for_biplot <- truth_all %>% dplyr::rename(state_2024call = state)
 state_lookup_2025_for_biplot <- pred_2025 %>%
@@ -371,8 +360,7 @@ scores_ALL <- scores_df %>% dplyr::filter(state_final %in% c("BAR","FOR","INCIP"
 p_biplot_ALL_withvecs <- make_biplot_arrows(scores_ALL, arrow_df, patch_colors)
 
 ################################################################################
-# Fig 2B/C: contrast-specific RF importance + boxplots -------------------------
-################################################################################
+#Figure 2B
 
 fit_binary_rf_hab <- function(df, pos = "INCIP", neg = "BAR", predictors) {
   df2 <- df %>%
@@ -551,49 +539,11 @@ p_C <- ggplot2::ggplot(box_df, ggplot2::aes(x = state_label, y = value, fill = s
   ) +
   ggplot2::labs(y = "Observed value", x = NULL)
 
-################################################################################
-# Assemble Fig 2 ---------------------------------------------------------------
-################################################################################
-
-p_A <- p_biplot_ALL_withvecs + ggplot2::theme(legend.position = "none")
-
-#top_row <- p_A + p_B + patchwork::plot_spacer() +
- # patchwork::plot_layout(widths = c(1.15, 0.85, 0.05))
-
-top_row <- p_A + p_B + patchwork::plot_spacer() +
-  patchwork::plot_layout(widths = c(1.05, 1.05, 0.02))
-
-
-Fig2 <- (top_row) / p_C +
-  patchwork::plot_layout(heights = c(1, 1.25)) +
-  patchwork::plot_annotation(tag_levels = "A") &
-  ggplot2::theme(
-    plot.tag    = ggplot2::element_text(size = 10),
-    plot.margin = ggplot2::margin(t = 5, r = 10, b = 5, l = 10)
-  )
-
-Fig2
-
-#ggsave(
-#  filename = here::here("figures", "Fig2_patch_habitat_correlatesv3.png"),
-#  plot     = Fig2,
-#  width    = 8.5,
-#  height   = 8.5,
-#  dpi      = 600,
-#  bg       = "white"
-#)
-
-
 
 ################################################################################
-#Alternate plot with just Panels A and B
+# Figure 2 combined
 
-
-################################################################################
-# Assemble Fig 2: A above B (drop C)
-################################################################################
-
-# If you want wrapped facet labels in B (prevents cutoff)
+# facet labels in B 
 imp_tbl <- imp_tbl %>%
   dplyr::mutate(
     contrast = dplyr::recode(
@@ -603,7 +553,7 @@ imp_tbl <- imp_tbl %>%
     )
   )
 
-# Rebuild p_B AFTER changing imp_tbl if your p_B uses it
+# Rebuild p_B AFTER changing imp_tbl 
 p_B <- imp_tbl %>%
   dplyr::mutate(variable_pretty = tidytext::reorder_within(variable_pretty, importance, contrast)) %>%
   ggplot2::ggplot(ggplot2::aes(x = variable_pretty, y = importance)) +
@@ -623,7 +573,7 @@ p_B <- imp_tbl %>%
 p_A <- p_biplot_ALL_withvecs + ggplot2::theme(legend.position = "right")  # or "none"
 
 Fig2 <- (p_A / p_B) +
-  patchwork::plot_layout(heights = c(1.2, 0.8)) +   # tweak as desired
+  patchwork::plot_layout(heights = c(1.2, 0.8)) +   
   patchwork::plot_annotation(tag_levels = "A") &
   ggplot2::theme(
     plot.tag = ggplot2::element_text(size = 10),
@@ -633,7 +583,7 @@ Fig2 <- (p_A / p_B) +
 Fig2
 
 ggsave(
-  filename = here::here("figures", "Fig2_patch_habitat_correlates_ABv2.png"),
+  filename = here::here("figures", "Fig2_patch_habitat_correlates.png"),
   plot     = Fig2,
   width    = 8.5,
   height   = 8.5,
@@ -641,101 +591,12 @@ ggsave(
   bg       = "white"
 )
 
-###############################################################################
-#Move old panel C to supp
-
-
-# Variables to show = union of top variables from both contrasts
-vars_C <- imp_tbl %>% dplyr::pull(variable) %>% unique()
-
-# Color mapping (labels used in the plot)
-patch_colors_named <- c(
-  "Barren"    = patch_colors[["BAR"]],
-  "Forest"    = patch_colors[["FOR"]],
-  "Incipient" = patch_colors[["INCIP"]]
-)
-
-
-trim_vars <- c("n_macro_plants_20m2","density20m2_ptecal","lamr","density20m2_nerlue","cov_dodecaceria_spp")
-
-# Facet order = by max importance across contrasts 
-facet_order <- imp_tbl %>%
- group_by(variable) %>%
-  summarise(max_imp = max(importance, na.rm = TRUE), .groups = "drop") %>%
-  arrange(dplyr::desc(max_imp)) %>%
- mutate(variable_pretty = dplyr::recode(variable, !!!pretty_labs, .default = variable)) %>%
-  pull(variable_pretty)
-
-# Build long data for boxplots (RAW values), 
-box_df <- dat_raw %>%
-  filter(density20m2_lamset < 3 | is.na(density20m2_lamset)) %>%
-  left_join(truth_all, by = c("patch_id","site","zone","year")) %>%
-  select(state, dplyr::all_of(vars_C)) %>%
-pivot_longer(cols = -state, names_to = "variable", values_to = "value") %>%
-  group_by(variable) %>%
-  mutate(
-    q_low  = if (first(variable) %in% trim_vars) stats::quantile(value, 0.01, na.rm = TRUE) else -Inf,
-    q_high = if (first(variable) %in% trim_vars) stats::quantile(value, 0.90, na.rm = TRUE) else  Inf
-  ) %>%
-  ungroup() %>%
-  filter(value >= q_low, value <= q_high | is.na(value)) %>%
-  mutate(
-    variable_pretty = dplyr::recode(variable, !!!pretty_labs, .default = variable),
-    state_label = factor(state, levels = c("BAR","FOR","INCIP"),
-                         labels = c("Barren","Forest","Incipient"))
-  ) %>%
-  mutate(variable_pretty = factor(variable_pretty, levels = facet_order))
-
-# Plot Panel C only
-p_C <- ggplot(
-  box_df,
-  aes(x = state_label, y = value, fill = state_label, color = state_label)
-) +
-  geom_boxplot(outlier.shape = NA, alpha = 0.75, linewidth = 0.4) +
-  facet_wrap(~ variable_pretty, scales = "free_y", ncol = 5) +
-  scale_fill_manual(values = patch_colors_named, name = "Patch state") +
-  scale_color_manual(values = patch_colors_named, guide = "none") +
-  theme_bw() + my_theme +
-  theme(
-    legend.position  = "bottom",
-    strip.text       = ggplot2::element_text(size = 8, face = "bold"),
-    axis.title.x     = ggplot2::element_blank(),
-    axis.text.x      = ggplot2::element_text(size = 7, angle = 20, hjust = 1),
-    axis.text.y      = ggplot2::element_text(size = 7),
-    panel.spacing    = grid::unit(0.4, "lines"),
-    panel.border     = ggplot2::element_rect(color = "black", linewidth = 0.5)
-  ) +
-  labs(y = "Observed value", x = NULL)
-
-p_C
-
-# Save
-ggsave(
-  filename = here::here("figures", "FigS_panelC_boxplots.png"),
-  plot     = p_C,
-  width    = 8.5,
-  height   = 8.5,
-  dpi      = 600,
-  bg       = "white"
-)
-
-
-
-
-
 
 
 ################################################################################
-# Summary statistics for Fig. 2 ------------------------------------------------
-################################################################################
+# Summary statistics 
 
-
-
-library(vegan)
-
-################################################################################
-# 1. Sample sizes by patch state ------------------------------------------------
-################################################################################
+#Sample sizes by patch state 
 
 patch_state_ns <- habitat_df %>%
   dplyr::count(state_final, name = "n") %>%
@@ -747,9 +608,8 @@ patch_state_ns <- habitat_df %>%
 
 print(patch_state_ns)
 
-################################################################################
-# 2. PCA variance explained -----------------------------------------------------
-################################################################################
+
+#PCA variance explained 
 
 pca_var <- (pca_obj$sdev)^2
 pca_var_exp <- pca_var / sum(pca_var)
@@ -767,9 +627,8 @@ cat("PC1 =", round(100 * pca_var_exp[1], 1), "%\n")
 cat("PC2 =", round(100 * pca_var_exp[2], 1), "%\n")
 cat("PC1 + PC2 =", round(100 * sum(pca_var_exp[1:2]), 1), "%\n")
 
-################################################################################
-# 3. Top PCA loadings -----------------------------------------------------------
-################################################################################
+
+#Top PCA loadings 
 
 loading_tbl <- tibble::as_tibble(
   pca_obj$rotation[, 1:2, drop = FALSE],
@@ -798,9 +657,8 @@ print(loading_tbl %>% dplyr::arrange(dplyr::desc(PC2)) %>% dplyr::slice(1:10))
 cat("\nTop negative loadings on PC2:\n")
 print(loading_tbl %>% dplyr::arrange(PC2) %>% dplyr::slice(1:10))
 
-################################################################################
-# 4. PERMANOVA -----------------------------------------------------------------
-################################################################################
+#
+#PERMANOVA
 
 # This uses the same transformed/scaled habitat matrix that went into the PCA.
 # Euclidean distance is appropriate here because PCA is based on Euclidean space.
@@ -814,64 +672,6 @@ permanova_res <- vegan::adonis2(
 
 cat("\nOverall PERMANOVA:\n")
 print(permanova_res)
-
-################################################################################
-# 5. Dispersion test (recommended alongside PERMANOVA) --------------------------
-################################################################################
-
-# Important: PERMANOVA can be influenced by differences in within-group dispersion.
-# This checks whether spread differs among groups.
-
-dist_mat <- dist(pca_mat, method = "euclidean")
-
-disp_mod <- vegan::betadisper(dist_mat, habitat_df$state_final)
-disp_anova <- anova(disp_mod)
-disp_perm  <- permutest(disp_mod, permutations = 9999)
-
-cat("\nHomogeneity of multivariate dispersion:\n")
-print(disp_anova)
-print(disp_perm)
-
-################################################################################
-# 6. Optional pairwise PERMANOVA ------------------------------------------------
-################################################################################
-
-# Uncomment if you want pairwise comparisons among states
-# library(pairwiseAdonis)
-#
-# pairwise_perm <- pairwiseAdonis::pairwise.adonis2(
-#   x = pca_mat,
-#   factors = habitat_df$state_final,
-#   sim.method = "euclidean",
-#   p.adjust.m = "BH"
-# )
-#
-# cat("\nPairwise PERMANOVA:\n")
-# print(pairwise_perm)
-
-################################################################################
-# 7. Nicely formatted values for manuscript text --------------------------------
-################################################################################
-
-# Pull overall PERMANOVA values
-perm_F  <- permanova_res$F[1]
-perm_R2 <- permanova_res$R2[1]
-perm_p  <- permanova_res$`Pr(>F)`[1]
-
-cat("\nManuscript-ready summary:\n")
-cat(
-  paste0(
-    "PC1 explained ", round(100 * pca_var_exp[1], 1),
-    "% and PC2 explained ", round(100 * pca_var_exp[2], 1),
-    "% of the variation (", round(100 * sum(pca_var_exp[1:2]), 1),
-    "% cumulative). PERMANOVA indicated that habitat structure differed among patch states ",
-    "(F = ", round(perm_F, 2),
-    ", R2 = ", round(perm_R2, 3),
-    ", p = ", format.pval(perm_p, digits = 3), ")."
-  ),
-  "\n"
-)
-
 
 
 

@@ -3,8 +3,8 @@
 
 rm(list = ls())
 
-#data required for merge
-#1. Benthic survey data averaged to zone level
+#data required 
+#1. Benthic survey data averaged to zone level 
 #2. Dissection data averaged to zone level
 #3. GIS isobath layers to split patch type
 #4. Sea otter scan data 

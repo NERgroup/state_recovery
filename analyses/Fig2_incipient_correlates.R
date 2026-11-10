@@ -65,7 +65,10 @@ truth_all <- dat_raw %>%
   ) %>%
   dplyr::mutate(state = factor(state, levels = c("BAR","INCIP","FOR")))
 
-# Identify numeric habitat predictors (exclude bio drivers & GI)
+# Identify state predictors. Exclude drivers that are used in subsequent
+# analyses to avoid pseudorep and confounding effects. These include: 
+# urchin biomass density, gonad mass, and sea otter foraging. These are predictors
+# that are used in subsequent analyses and should not be used to define patch state. 
 ban_regex <- "(urchin|gonad|biomass|forag|foraging|\\bgi\\b|_gi$|mean_gi|sd_gi)"
 num_cols_all    <- names(dat_raw)[sapply(dat_raw, is.numeric)]
 allowed_numeric <- num_cols_all[!grepl(ban_regex, num_cols_all, ignore.case = TRUE)]

@@ -13,14 +13,14 @@ librarian::shelf(tidyverse, sf, raster, shiny, tmap, scales, readxl, lubridate)
 #set directories (note: internal servers were used for this processing stage 
 #because of GitHub file size limitations. External users should refer to prior 
 #steps for preliminary processing steps and update paths)
-basedir <- "/Volumes/seaotterdb$/kelp_recovery/data"
+basedir <- "/Volumes/enhydra/kelp_recovery/data"
 figdir <- here::here("figures")
 output <- here::here("output")
 
 #landsat data
-clusters <- st_read(file.path(output, "/landsat/processed/named_clustersv2.geojson"))
+clusters <- st_read(file.path(output, "/landsat/processed/named_clusters.geojson"))
 
-#sofa formatted data from Access
+ #sofa formatted data from Access
 sofa_dat <- read_xlsx(file.path(basedir, "foraging_data/raw/SOFA_Output_wlatlong_2016to2024.xlsx"))
 
 #Forage data

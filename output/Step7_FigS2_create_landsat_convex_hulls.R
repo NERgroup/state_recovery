@@ -11,22 +11,13 @@ librarian::shelf(tidyverse, sf, raster, shiny, tmap, scales, readxl, smoothr,
 
 #set directories 
 basedir <- "/Volumes/enhydra/data/kelp_recovery/"
-localdir <- "/Users/jossmith/Documents/Data/landsat"
-figdir <- here::here("figures")
 output <- here::here("output")
 
-#read landsat 
-#clusters <- st_read(file.path(output, "/landsat/processed/named_clusters.geojson")) #old clustering
-clusters <- st_read(file.path(output, "/landsat/processed/named_clustersv2.geojson"))
-
-#read state polyline
-coast_path  <- "/Volumes/enhydra/data/kelp_recovery/gis_data/raw/Coastn83/coastn83.shp"
+#read classified Landsat clusters
+clusters <- st_read(file.path(output, "landsat", "processed", "named_clusters.geojson"))
 
 #read state
 ca_counties <- st_read(file.path(basedir, "gis_data/raw/ca_county_boundaries/s7vc7n.shp")) 
-
-#multivariate patch types
-load(here::here("output","lda_patch_transitionsv3.rda"))
 
 # Get land
 usa <- rnaturalearth::ne_states(country="United States of America", returnclass = "sf")

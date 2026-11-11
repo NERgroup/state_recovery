@@ -34,7 +34,8 @@ output <- here::here("output")
 ca_counties_orig <- st_read(file.path(basedir, "gis_data/raw/ca_county_boundaries/s7vc7n.shp")) 
 
 #read landsat raw
-landsat_orig <- st_read(file.path(basedir, "kelp_landsat/processed/monterey_peninsula/landsat_mpen_1984_2023_points_withNAs.shp"))
+#landsat_orig <- st_read(file.path(basedir, "kelp_landsat/processed/monterey_peninsula/landsat_mpen_1984_2023_points_withNAs.shp"))
+landsat_orig <- st_read(file.path(basedir, "kelp_landsat/processed/monterey_peninsula/landsat_mpen_1984_2023_points_withNAsv2.shp"))
 
 #read cluster area
 landsat_hclust <- readRDS(file.path(basedir,"/kelp_landsat/processed/landsat_cluster_ID_123.Rds"))
@@ -105,10 +106,12 @@ plot(area_data %>% filter(year == 2023))
 
 
 #st_write(area_data, file.path(output, "area_data3.geojson")) #last write 16 Feb 2024
-st_write(area_data, file.path(output, "landsat/processed/kelp_area_by_cluster.geojson"),
-         delete_dsn=TRUE) #last write 17 April 2025
+#st_write(area_data, file.path(output, "landsat/processed/kelp_area_by_cluster.geojson"),
+#         delete_dsn=TRUE) #last write 17 April 2025
 
 
+st_write(area_data, file.path(output, "landsat/processed/kelp_area_by_clusterv2.geojson"),
+         delete_dsn=TRUE) #last write 11 Nov 2026
 
 
 

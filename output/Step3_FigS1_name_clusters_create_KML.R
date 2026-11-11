@@ -11,7 +11,10 @@ librarian::shelf(tidyverse, sf)
 output <- here::here("output")
 
 #read Landsat clusters
-final_data <- st_read(file.path(output, "landsat", "processed", "kelp_area_by_cluster.geojson")) %>%
+#final_data <- st_read(file.path(output, "landsat", "processed", "kelp_area_by_cluster.geojson")) %>%
+#  st_cast("POINT")
+
+final_data <- st_read(file.path(output, "landsat", "processed", "kelp_area_by_clusterv2.geojson")) %>%
   st_cast("POINT")
 
 ###############################################################################

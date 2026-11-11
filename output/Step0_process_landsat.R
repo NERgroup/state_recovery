@@ -160,4 +160,11 @@ ggplot() +
 
 ################################################################################
 #Export
-st_write(kelp_landsat_export_MPEN, file.path(datout, "monterey_peninsula/landsat_mpen_1984_2023_points_withNAs.shp"))
+#st_write(kelp_landsat_export_MPEN, file.path(datout, "monterey_peninsula/landsat_mpen_1984_2023_points_withNAs.shp"))
+
+
+#last write 11Nov2026
+st_write(kelp_landsat_export_MPEN, file.path(datout, "monterey_peninsula/landsat_mpen_1984_2023_points_withNAsv2.shp"))
+
+
+

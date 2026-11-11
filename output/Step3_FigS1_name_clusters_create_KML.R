@@ -257,6 +257,6 @@ ggsave(
 #Export named clusters
 
 # Export classified clusters as GeoJSON
-st_write(landsat_classified, file.path(output, "landsat/processed/named_clustersv2.geojson"), delete_dsn = TRUE)
+st_write(landsat_classified, file.path(output, "landsat/processed/named_clusters.geojson"), delete_dsn = TRUE)
 
 

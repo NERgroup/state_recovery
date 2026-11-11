@@ -1,10 +1,8 @@
 ################################################################################
-# FIGURE: Recovery signature of incipient forests
-# Standardized contrasts (Hedges' g with bootstrap 95% CIs)
-#
-# Positive values  = higher in incipient forests
-# Negative values  = lower in incipient forests
-#
+
+#jogsmith@ucsc.edu
+
+
 # Contrasts:
 #   1) Incipient vs Barren
 #   2) Incipient vs Forest
@@ -20,10 +18,7 @@
 #   - Total kelp recruit density
 ################################################################################
 
-#jogsmith@ucsc.edu
-
-rm(list = ls())
-options(stringsAsFactors = FALSE)
+rm(list=ls())
 
 require(librarian)
 shelf(
@@ -62,11 +57,13 @@ state_lookup_all <- readr::read_csv(
 ################################################################################
 #Helper functions
 
+# Calculate the concealment ratio; return NA for invalid inputs and constrain it to [0, 1].
 safe_ratio <- function(num, den) {
   out <- ifelse(is.finite(num) & is.finite(den) & den > 0, num / den, NA_real_)
   pmin(pmax(out, 0), 1)
 }
 
+# Compute small-sample-corrected Hedges' g; positive values mean x1 is higher than x2.
 hedges_g <- function(x1, x2) {
   x1 <- x1[is.finite(x1)]
   x2 <- x2[is.finite(x2)]
@@ -90,6 +87,7 @@ hedges_g <- function(x1, x2) {
   J * d
 }
 
+# Bootstrap Hedges' g by resampling each group; return the estimate, percentile CI, and sample sizes.
 boot_hedges_g <- function(x1, x2, n_boot = 2000, conf = 0.95) {
   x1 <- x1[is.finite(x1)]
   x2 <- x2[is.finite(x2)]
@@ -251,8 +249,7 @@ driver_df_all <- patch_predictors_all %>%
     by = c("patch_id", "site", "zone", "year")
   ) %>%
   dplyr::mutate(
-    mean_otter_occupancy = tidyr::replace_na(mean_otter_occupancy, 0),
-    state_resp = factor(state_resp, levels = c("BAR", "INCIP", "FOR"))
+    mean_otter_occupancy = tidyr::replace_na(mean_otter_occupancy, 0)
   )
 
 ################################################################################
@@ -486,10 +483,6 @@ effect_table_pretty <- effects_df %>%
 
 gt_tbl <- effect_table_pretty %>%
   gt::gt(groupname_col = "contrast") %>%
- # gt::tab_header(
-  #  title = "Mechanistic correlates of recovery",
-   # subtitle = "Standardized effect sizes comparing incipient forests to barrens and forests"
-  #) %>%
   gt::cols_label(
     variable = "Variable"
   ) %>%

@@ -30,7 +30,8 @@ dissection_orig <- read_csv(file.path(datadir, "MBA_kelp_forest_database/process
 
 #load LDA-predicted patch types
 #lda_patch <- load(here::here("output","lda_patch_transitionsv2.rda"))
-lda_patch <- load(here::here("output","lda_patch_transitionsv5.rda"))
+#lda_patch <- load(here::here("output","lda_patch_transitionsv5.rda"))
+lda_patch <- load(here::here("output","lda_patch_transitions.rda"))
 
 ################################################################################
 #Step 1: prep authoritative patch type table
@@ -54,7 +55,7 @@ dissect_build1 <- dissection_orig %>%
     year = year(survey_date)
   ) %>%
   #drop field that we don't need
-  select(-test_height_mm, test_diameter_mm)
+  dplyr::select(-test_height_mm, test_diameter_mm)
 
 
 dissect_with_pred <- dissect_build1 %>%

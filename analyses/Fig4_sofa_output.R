@@ -2,11 +2,10 @@
 #jogsmith@ucsc.edu
 
 rm(list = ls())
-options(stringsAsFactors = FALSE)
 
 require(librarian)
 librarian::shelf(
-  tidyverse, janitor, readxl, here,
+  tidyverse, readxl, here,
   ggridges, patchwork, sf, lubridate
 )
 
@@ -17,10 +16,9 @@ librarian::shelf(
 # SOFA results
 sofa_path <- here::here("output", "sofa", "SOFA_Results_2025-10-31.xlsx")
 eta_df    <- read_xlsx(sofa_path, sheet = "propforagingeffort")
-cr_df     <- read_xlsx(sofa_path, sheet = "meanbiomassconsumption")
 
 # Zone-level data
-loaded_objs <- load(here::here("output", "survey_data", "processed", "zone_level_data.rda"))
+load(here::here("output", "survey_data", "processed", "zone_level_data.rda"))
 
 
 # Size-frequency data
@@ -48,12 +46,6 @@ recode_patches <- function(df) {
 }
 
 eta_focus <- recode_patches(eta_df)
-cr_focus  <- recode_patches(cr_df)
-
-cr_focus <- cr_focus %>%
-  group_by(patch_type) %>%
-  slice_max(mean, n = 1, with_ties = FALSE) %>%
-  ungroup()
 
 expand_posterior <- function(tbl, n = 5000) {
   tbl %>%
@@ -64,7 +56,6 @@ expand_posterior <- function(tbl, n = 5000) {
 }
 
 eta_draws <- expand_posterior(eta_focus)
-cr_draws  <- expand_posterior(cr_focus)
 
 posterior_summary <- function(df) {
   df %>%
@@ -78,7 +69,6 @@ posterior_summary <- function(df) {
 }
 
 eta_sum <- posterior_summary(eta_draws)
-cr_sum  <- posterior_summary(cr_draws)
 
 
 ################################################################################
@@ -240,7 +230,6 @@ pD <- ggplot(
   labs(x = "Purple urchin \nsize frequency (cm)", y = NULL, tag = "D") +
   theme_panel(base_size = 11) +
   theme(
-    #axis.text.y = element_blank(),
     legend.position = "right"
   )
 

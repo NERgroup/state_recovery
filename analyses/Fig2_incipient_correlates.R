@@ -1,17 +1,12 @@
 ################################################################################
 # jogsmith@ucsc.edu
 
-rm(list = ls())
-options(stringsAsFactors = FALSE)
+rm(list=ls())
 
+#load packages and prep workspace
 require(librarian)
-shelf(
-  tidyverse, janitor, lubridate, sf, here,
-  randomForest, patchwork, ggrepel, tidytext, vegan
-)
 
-# Reproducibility
-set.seed(1985)
+shelf(tidyverse, patchwork)
 
 ################################################################################
 #Setup / load data 
@@ -25,6 +20,9 @@ patch_colors <- c(
   "INCIP" = "#D95F02",
   "FOR"   = "#1B9E77"
 )
+
+# Reproducibility
+set.seed(1985)
 
 ################################################################################
 # Helper functions 
@@ -207,8 +205,6 @@ transitions_tbl_constrained <- final_patch_sf %>%
   ) %>%
   dplyr::select(site, zone, site_type, patch_2024, patch_2025)
 
-str(transitions_tbl_constrained)
-
 ###NOTE: NAs for REC_14 shallow in 2024 and REC_13 deep in 2024 are ok. These
 #sites were surveyed only in 2025
 
@@ -272,11 +268,9 @@ pca_mat <- habitat_df %>%
 pca_obj <- prcomp(pca_mat, center = FALSE, scale. = FALSE)
 
 scores_df <- tibble::as_tibble(pca_obj$x[, 1:2, drop = FALSE]) %>%
-  dplyr::rename(PC1 = PC1, PC2 = PC2) %>%
   dplyr::bind_cols(habitat_df %>% dplyr::select(patch_id, site, zone, year, state_final))
 
 loadings_df <- tibble::as_tibble(pca_obj$rotation[, 1:2, drop = FALSE], rownames = "variable") %>%
-  dplyr::rename(PC1 = PC1, PC2 = PC2) %>%
   dplyr::mutate(vec_len = sqrt(PC1^2 + PC2^2))
 
 arrow_ban_regex <- "(urchin|gonad|biomass|forag|foraging|\\bgi\\b|_gi\\b|mean_gi|sd_gi|lat|lon|long)"
@@ -359,8 +353,7 @@ make_biplot_arrows <- function(score_data, arrow_data, patch_colors) {
                    legend.position = "right")
 }
 
-scores_ALL <- scores_df %>% dplyr::filter(state_final %in% c("BAR","FOR","INCIP"))
-p_biplot_ALL_withvecs <- make_biplot_arrows(scores_ALL, arrow_df, patch_colors)
+p_biplot_ALL_withvecs <- make_biplot_arrows(scores_df, arrow_df, patch_colors)
 
 ################################################################################
 #Figure 2B
@@ -453,25 +446,6 @@ imp_tbl <- tibble::tibble(
   dplyr::arrange(dplyr::desc(importance), .by_group = TRUE) %>%
   dplyr::slice_head(n = topN_B) %>%
   dplyr::ungroup()
-
-p_B <- imp_tbl %>%
-  dplyr::mutate(
-    # reorder *within each facet*
-    variable_pretty = tidytext::reorder_within(variable_pretty, importance, contrast)
-  ) %>%
-  ggplot2::ggplot(ggplot2::aes(x = variable_pretty, y = importance)) +
-  ggplot2::geom_col(fill = "grey40") +
-  ggplot2::coord_flip() +
-  ggplot2::facet_wrap(~ contrast, scales = "free_y") +
-  tidytext::scale_x_reordered() +
-  ggplot2::theme_bw() +
-  ggplot2::labs(x = NULL, y = "Permutation importance (Mean decrease accuracy)") +
-  ggplot2::theme(
-    panel.grid = ggplot2::element_blank(),
-    strip.background = ggplot2::element_blank(),
-    strip.text = ggplot2::element_text(face = "bold", size = 10)
-  )
-
 
 vars_C <- imp_tbl %>% dplyr::pull(variable) %>% unique()
 
@@ -573,7 +547,7 @@ p_B <- imp_tbl %>%
     plot.margin = ggplot2::margin(t = 6, r = 6, b = 6, l = 6)
   )
 
-p_A <- p_biplot_ALL_withvecs + ggplot2::theme(legend.position = "right")  # or "none"
+p_A <- p_biplot_ALL_withvecs + ggplot2::theme(legend.position = "right")
 
 Fig2 <- (p_A / p_B) +
   patchwork::plot_layout(heights = c(1.2, 0.8)) +   
@@ -637,7 +611,6 @@ loading_tbl <- tibble::as_tibble(
   pca_obj$rotation[, 1:2, drop = FALSE],
   rownames = "variable"
 ) %>%
-  dplyr::rename(PC1 = PC1, PC2 = PC2) %>%
   dplyr::mutate(
     abs_PC1 = abs(PC1),
     abs_PC2 = abs(PC2),

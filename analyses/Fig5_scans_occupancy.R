@@ -7,7 +7,7 @@ rm(list = ls())
 require(librarian)
 librarian::shelf(
   tidyverse, lubridate, sf, janitor, here,
-  broom, patchwork, scales
+  patchwork, scales
 )
 
 #set paths and load data
@@ -68,42 +68,6 @@ scale_vec <- function(x) {
 inv_logit <- function(x) {
   1 / (1 + exp(-x))
 }
-
-make_2d_grid <- function(x, y, n_x = 120, n_y = 120) {
-  x <- x[is.finite(x)]
-  y <- y[is.finite(y)]
-  
-  x_min <- max(0, min(x, na.rm = TRUE))
-  x_max <- min(1, max(x, na.rm = TRUE))
-  y_min <- min(y, na.rm = TRUE)
-  y_max <- max(y, na.rm = TRUE)
-  
-  if (!is.finite(x_min) || !is.finite(x_max) ||
-      !is.finite(y_min) || !is.finite(y_max)) {
-    stop("Predictors contain no finite values.")
-  }
-  
-  if (x_max == x_min) x_max <- x_min + 1e-6
-  if (y_max == y_min) y_max <- y_min + 1e-6
-  
-  x_mu <- mean(x, na.rm = TRUE)
-  x_sd <- sd(x, na.rm = TRUE)
-  y_mu <- mean(y, na.rm = TRUE)
-  y_sd <- sd(y, na.rm = TRUE)
-  
-  if (!is.finite(x_sd) || x_sd == 0) x_sd <- 1
-  if (!is.finite(y_sd) || y_sd == 0) y_sd <- 1
-  
-  tidyr::crossing(
-    occ_freq_2024 = seq(x_min, x_max, length.out = n_x),
-    log_total_otters_2024 = seq(y_min, y_max, length.out = n_y)
-  ) %>%
-    dplyr::mutate(
-      occ_freq_2024_sc = (occ_freq_2024 - x_mu) / x_sd,
-      log_total_otters_2024_sc = (log_total_otters_2024 - y_mu) / y_sd
-    )
-}
-
 
 ################################################################################
 #aggregate benthic survey data to zone x survey_date
@@ -267,8 +231,7 @@ scan_in_patches <- sf::st_join(
   site_patches_single %>% dplyr::select(patch_id),
   join = sf::st_intersects,
   left = FALSE
-) %>%
-  dplyr::mutate(year = lubridate::year(scan_date))
+)
 
 ################################################################################
 # patch-date summaries
@@ -308,8 +271,6 @@ patch_otter_by_year <- scan_patch_date %>%
     occ_freq = mean(occupied, na.rm = TRUE),
     total_otters = sum(patch_tot_otters, na.rm = TRUE),
     log_total_otters = log1p(total_otters),
-    mean_otters = mean(patch_tot_otters, na.rm = TRUE),
-    n_scans = dplyr::n(),
     .groups = "drop"
   )
 
@@ -318,10 +279,7 @@ patch_otter_2024 <- patch_otter_by_year %>%
   dplyr::transmute(
     patch_id,
     occ_freq_2024 = occ_freq,
-    total_otters_2024 = total_otters,
-    log_total_otters_2024 = log_total_otters,
-    mean_otters_2024 = mean_otters,
-    n_scans_2024 = n_scans
+    log_total_otters_2024 = log_total_otters
   )
 
 ################################################################################

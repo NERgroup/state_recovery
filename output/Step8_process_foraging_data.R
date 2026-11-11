@@ -4,6 +4,10 @@
 #jogsmith@ucsc.edu
 #Script initiated 16 Cot 2025
 
+##Note: the data below live on an intenral server because of use restrictions. 
+#Script below is intermediate, but the output of later steps is available on GitHub
+#for reproducibility. 
+
 rm(list=ls())
 
 #load packages

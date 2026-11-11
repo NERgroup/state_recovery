@@ -6,29 +6,13 @@ rm(list=ls())
 
 ######
 #required packages
-librarian::shelf(tidyverse, sf, raster, shiny, tmap)
+librarian::shelf(tidyverse, sf)
 
-#set directories (note: internal servers were used for this processing stage 
-#because of GitHub file size limitations. External users should refer to prior 
-#steps for preliminary processing steps and update paths)
-basedir <- "/Volumes/enhydra/data/kelp_recovery/" #internal dir
-
-figdir <- here::here("figures")
 output <- here::here("output")
 
-#read landsat 
-final_data <- st_read(file.path(output, "landsat", "processed", "kelp_area_by_cluster2.geojson")) %>%
-  mutate(site_numeric = as.numeric(cluster)) %>%
+#read Landsat clusters
+final_data <- st_read(file.path(output, "landsat", "processed", "kelp_area_by_cluster.geojson")) %>%
   st_cast("POINT")
-
-#read state
-ca_counties <- st_read(file.path(basedir, "gis_data/raw/ca_county_boundaries/s7vc7n.shp")) 
-
-# Get land
-usa <- rnaturalearth::ne_states(country="United States of America", returnclass = "sf")
-foreign <- rnaturalearth::ne_countries(country=c("Canada", "Mexico"), returnclass = "sf")
-
-
 
 ###############################################################################
 #clean up spatial extent 
@@ -43,7 +27,6 @@ box_coords <- tibble(x = xlims, y = ylims) %>%
 
 #get the bounding box of the two x & y coordintates, make sfc
 bounding_box <- st_bbox(box_coords) %>% st_as_sfc()
-plot(bounding_box)
 
 # Filter out the points falling within the bounding box
 landsat_build1 <- st_difference(final_data, bounding_box) 
@@ -64,13 +47,10 @@ bounding_box <- st_bbox(box_coords) %>% st_as_sfc()
 # Filter out the points falling within the bounding box
 landsat_build2 <- st_intersection(landsat_build1, bounding_box) 
 
-
-plot(landsat_build2 %>% filter(year == 2023))
-
 ################################################################################
 #rename clusters
 
-#rename sites and create table
+#Map cluster IDs to site numbers
 landsat_build3 <- landsat_build2 %>%
   mutate(
     #set cluster order
@@ -150,61 +130,13 @@ landsat_build3 <- landsat_build2 %>%
       cluster == 110 ~ 73,
       TRUE ~ NA)
   ) %>%
-  #filter to data extent
   filter(!(is.na(cluster)))
-
-
-################################################################################
-#plot timeseries for each cluster to inspect
-
-# Theme
-base_theme <-  theme(axis.text=element_text(size=7, color = "black"),
-                     axis.title=element_text(size=8,color = "black"),
-                     legend.text=element_text(size=7,color = "black"),
-                     legend.title=element_text(size=8,color = "black"),
-                     plot.tag=element_text(size=8,color = "black"),
-                     # Gridlines
-                     panel.grid.major = element_blank(), 
-                     panel.grid.minor = element_blank(),
-                     panel.background = element_blank(), 
-                     axis.line = element_line(colour = "black"),
-                     # Legend
-                     legend.key = element_rect(fill=alpha('blue', 0)),
-                     legend.background = element_rect(fill=alpha('blue', 0)),
-                     #facets
-                     strip.text = element_text(size=6, face = "bold",color = "black", hjust=0),
-                     strip.background = element_blank())
-
-
-# Plot 
-ggplot(landsat_build3, aes(x = year, y = perc_of_baseline)) +
-  geom_point() + 
-  geom_smooth(se = TRUE) +
-  facet_wrap(~ site_num, scales = "free_y") + theme_bw() + base_theme
 
 
 ################################################################################
 #determine site type
 
-# Updated classification function using a threshold of 5% of the baseline mean.
-# Any measurement less than 0.1 is considered equivalent to 0.
-#classify_site <- function(values, threshold = 0.1) {
-#  if (!any(values < threshold)) { 
-#    # If none of the values are below 1, then the site is persistent.
-#    return("Forest")
-#  } else {
-#    # Get the index of the first occurrence where the measurement is below the threshold.
-#    first_low <- which(values < threshold)[1]
-#    # If all values from that point onward are below the threshold, classify as barren.
-#    if (all(values[first_low:length(values)] < threshold)) {
-#      return("Barren")
-#    } else {
-#      # Otherwise, the site went low and then recovered, so classify as incipient.
-#      return("Incipient")
-#    }
-#  }
-#}
-
+# Classify site trajectories using 5% of baseline as the low-canopy threshold.
 classify_site <- function(values, threshold = 0.05) {
   if (!any(values < threshold)) {
     return("Forest")
@@ -251,7 +183,6 @@ print(site_class)
 
 # Merge the classification back into the main dataset
 landsat_classified <- landsat_build3 %>%
-  #filter(year > 2013) %>%
   left_join(site_class, by = "site_num")
 
 ################################################################################
@@ -278,7 +209,7 @@ my_theme <- theme(
   strip.background = element_blank()
 )
 
-# Plot percent of max for each site, colored by site type
+# Plot proportion of baseline by site type
 # Patch-state colors (same as other figs)
 patch_cols <- c(
   "Barren"    = "#7570B3",
@@ -325,7 +256,7 @@ ggsave(
 ################################################################################
 #Export named clusters
 
-# Export landsat_build4 as a GeoJSON file
+# Export classified clusters as GeoJSON
 st_write(landsat_classified, file.path(output, "landsat/processed/named_clustersv2.geojson"), delete_dsn = TRUE)
 
 

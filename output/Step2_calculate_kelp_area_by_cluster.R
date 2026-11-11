@@ -105,7 +105,7 @@ plot(area_data %>% filter(year == 2023))
 
 
 #st_write(area_data, file.path(output, "area_data3.geojson")) #last write 16 Feb 2024
-st_write(area_data, file.path(output, "landsat/processed/kelp_area_by_cluster2.geojson"),
+st_write(area_data, file.path(output, "landsat/processed/kelp_area_by_cluster.geojson"),
          delete_dsn=TRUE) #last write 17 April 2025
 
 

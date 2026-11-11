@@ -11,13 +11,13 @@ librarian::shelf(tidyverse, sf, raster, shiny, tmap)
 #set directories (note: internal servers were used for this processing stage 
 #because of GitHub file size limitations. External users should refer to prior 
 #steps for preliminary processing steps and update paths)
-basedir <- "/Volumes/enhydra/data/kelp_recovery/"
+basedir <- "/Volumes/enhydra/data/kelp_recovery/" #internal dir
 
 figdir <- here::here("figures")
 output <- here::here("output")
 
 #read landsat 
-final_data <- st_read(file.path(output, "/landsat/processed/kelp_area_by_cluster2.geojson")) %>%
+final_data <- st_read(file.path(output, "landsat", "processed", "kelp_area_by_cluster2.geojson")) %>%
   mutate(site_numeric = as.numeric(cluster)) %>%
   st_cast("POINT")
 

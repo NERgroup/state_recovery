@@ -649,6 +649,72 @@ permanova_res <- vegan::adonis2(
 cat("\nOverall PERMANOVA:\n")
 print(permanova_res)
 
+################################################################################
+# Pairwise PERMANOVA: yearly patch-state observations
 
+# Match the overall test: pooled years, unrestricted permutations, Euclidean distance.
+# Rows are treated as independent; FOR means forest in that year, not both years.
+# Predicted states use these habitat variables, so this is not independent validation.
+pairwise_permanova_res <- local({
+  library(vegan)
 
+  stopifnot(
+    nrow(pca_mat) == nrow(habitat_df),
+    all(is.finite(pca_mat)),
+    !anyNA(habitat_df$state_final)
+  )
 
+  contrasts <- list(c("INCIP", "FOR"), c("INCIP", "BAR"), c("FOR", "BAR"))
+  state_labels <- c(INCIP = "Incipient", FOR = "Forest", BAR = "Barren")
+  n_perm <- 9999L
+  set.seed(6873)
+
+  results <- lapply(contrasts, function(states) {
+    keep <- habitat_df$state_final %in% states
+    pair_data <- habitat_df[keep, , drop = FALSE]
+    pair_data$state_final <- factor(pair_data$state_final, levels = states)
+    pair_mat <- pca_mat[keep, , drop = FALSE]
+    group_n <- table(pair_data$state_final)
+    if (any(group_n < 2L)) {
+      stop("Each state must have at least two observations: ", paste(states, collapse = " vs "))
+    }
+
+    fit <- vegan::adonis2(
+      pair_mat ~ state_final,
+      data = pair_data,
+      method = "euclidean",
+      permutations = n_perm
+    )
+
+    # Unequal dispersion can complicate interpretation of PERMANOVA separation.
+    dispersion <- vegan::betadisper(
+      stats::dist(pair_mat, method = "euclidean"),
+      group = pair_data$state_final,
+      type = "median",
+      bias.adjust = TRUE
+    )
+    dispersion_test <- vegan::permutest(dispersion, permutations = n_perm)
+
+    tibble::tibble(
+      contrast = paste(unname(state_labels[states]), collapse = " vs "),
+      n_group1 = unname(group_n[1]),
+      n_group2 = unname(group_n[2]),
+      df_model = fit$Df[1],
+      df_residual = fit$Df[2],
+      pseudo_F = fit$F[1],
+      R2 = fit$R2[1],
+      p_value = fit$`Pr(>F)`[1],
+      dispersion_F = dispersion_test$tab[1, "F"],
+      dispersion_p = dispersion_test$tab[1, "Pr(>F)"]
+    )
+  })
+
+  dplyr::bind_rows(results) |>
+    dplyr::mutate(
+      p_holm = stats::p.adjust(p_value, method = "holm"),
+      dispersion_p_holm = stats::p.adjust(dispersion_p, method = "holm")
+    ) |>
+    dplyr::relocate(p_holm, .after = p_value)
+})
+
+print(pairwise_permanova_res, width = Inf)

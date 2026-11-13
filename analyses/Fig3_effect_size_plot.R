@@ -434,7 +434,7 @@ p_effects
 #export
 
 ggsave(
-  filename = here::here("figures", "Fig4_recovery_effectsizes_ranked.png"),
+  filename = here::here("figures", "Fig3_recovery_effectsizes_ranked.png"),
   plot     = p_effects,
   width    = 8.8,
   height   = 5.6,
